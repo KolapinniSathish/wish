@@ -78,28 +78,7 @@ button:hover{
     <h2>Love you! 💖</h2>
 </div>
 
-<!-- music -->
-<audio id="music">
-<source src="https://www.bensound.com/bensound-music/bensound-romantic.mp3" type="audio/mp3">
-</audio>
 
-<script>
-function playMusic(){
-    document.getElementById("music").play();
-}
-
-/* generate floating hearts */
-setInterval(()=>{
-    let heart=document.createElement("div");
-    heart.className="heart";
-    heart.innerHTML="❤";
-    heart.style.left=Math.random()*100+"vw";
-    heart.style.fontSize=(10+Math.random()*30)+"px";
-    document.body.appendChild(heart);
-
-    setTimeout(()=>heart.remove(),6000);
-},300);
-</script>
 
 </body>
 </html>
