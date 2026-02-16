@@ -3,82 +3,178 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reminder</title>
-
-<style>
-body{
-    margin:0;
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg,#ff758c,#ff7eb3);
-    height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    overflow:hidden;
-}
-
-/* floating hearts */
-.heart{
-    position:absolute;
-    color:white;
-    font-size:20px;
-    animation: float 6s linear infinite;
-}
-@keyframes float{
-    0%{transform:translateY(100vh); opacity:0;}
-    50%{opacity:1;}
-    100%{transform:translateY(-10vh); opacity:0;}
-}
-
-/* card */
-.card{
-    background:white;
-    padding:40px;
-    border-radius:20px;
-    text-align:center;
-    box-shadow:0 15px 40px rgba(0,0,0,0.2);
-    animation: fadeIn 2s ease;
-}
-@keyframes fadeIn{
-    from{opacity:0; transform:scale(0.8);}
-    to{opacity:1; transform:scale(1);}
-}
-
-h1{
-    color:#ff4d6d;
-    margin-bottom:10px;
-}
-
-p{
-    font-size:18px;
-    color:#555;
-}
-
-button{
-    margin-top:20px;
-    padding:12px 25px;
-    border:none;
-    border-radius:30px;
-    background:#ff4d6d;
-    color:white;
-    font-size:16px;
-    cursor:pointer;
-    transition:0.3s;
-}
-button:hover{
-    transform:scale(1.1);
-}
-</style>
+<title>Reading Goal Stopwatch Planner</title>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body>
+<body class="bg-gray-100 min-h-screen font-sans">
 
-<div class="card">
-    <h1>Start reading</h1>
+<div class="max-w-5xl mx-auto p-6">
+    
+    <!-- Header -->
+    <div class="text-center mb-6">
+        <h1 class="text-3xl font-bold">📚 Reading Goal Stopwatch Planner</h1>
+        <p class="text-gray-600">Track your reading time using live stopwatches. Adjust sessions anytime.</p>
+    </div>
+
+    <!-- Daily Goal -->
+    <div class="bg-white rounded-2xl shadow p-6 mb-6">
+        <div class="flex items-center gap-4">
+            <label class="font-semibold">Daily Reading Goal (hours):</label>
+            <input id="goalInput" type="number" value="14" min="1" class="border rounded px-3 py-1 w-24">
+        </div>
+
+        <div class="mt-4">
+            <div class="flex justify-between mb-1">
+                <span class="font-semibold">Progress</span>
+                <span id="progressText">0 / 14 hrs</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4">
+                <div id="progressBar" class="bg-green-500 h-4 rounded-full" style="width:0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Session -->
+    <div class="bg-white rounded-2xl shadow p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-3">Add Reading Session</h2>
+        <div class="flex flex-wrap gap-3">
+            <input id="sessionName" placeholder="Session name" class="border rounded px-3 py-1">
+            <input id="sessionTarget" type="number" placeholder="Target hrs" min="0.25" step="0.25" class="border rounded px-3 py-1 w-32">
+            <button onclick="addSession()" class="bg-blue-600 text-white px-4 py-1 rounded">Add Session</button>
+        </div>
+    </div>
+
+    <!-- Sessions -->
+    <div class="bg-white rounded-2xl shadow p-6">
+        <h2 class="text-xl font-semibold mb-4">Reading Sessions</h2>
+        <div id="sessions" class="space-y-4"></div>
+    </div>
+
 </div>
 
+<script>
+let sessions = [];
+let totalSecondsRead = 0;
 
+const sessionsDiv = document.getElementById('sessions');
+const progressBar = document.getElementById('progressBar');
+const progressText = document.getElementById('progressText');
+const goalInput = document.getElementById('goalInput');
+
+function formatTime(seconds){
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+}
+
+function updateProgress(){
+    totalSecondsRead = sessions.reduce((sum, s) => sum + s.elapsed, 0);
+    const goalHours = Number(goalInput.value);
+    const totalHours = totalSecondsRead / 3600;
+    const percent = (totalHours / goalHours) * 100;
+
+    progressBar.style.width = Math.min(percent,100) + "%";
+    progressText.textContent = `${totalHours.toFixed(2)} / ${goalHours} hrs`;
+}
+
+function addSession(){
+    const name = document.getElementById('sessionName').value || "Reading Session";
+    const target = Number(document.getElementById('sessionTarget').value || 1);
+
+    const session = {
+        id: Date.now(),
+        name,
+        targetHours: target,
+        elapsed: 0,
+        running: false,
+        interval: null
+    };
+
+    sessions.push(session);
+    renderSessions();
+}
+
+function startSession(id){
+    const s = sessions.find(x => x.id === id);
+    if(s.running) return;
+
+    s.running = true;
+    s.interval = setInterval(() => {
+        s.elapsed++;
+        renderSessions();
+        updateProgress();
+    },1000);
+}
+
+function pauseSession(id){
+    const s = sessions.find(x => x.id === id);
+    s.running = false;
+    clearInterval(s.interval);
+}
+
+function resetSession(id){
+    const s = sessions.find(x => x.id === id);
+    pauseSession(id);
+    s.elapsed = 0;
+    renderSessions();
+    updateProgress();
+}
+
+function deleteSession(id){
+    pauseSession(id);
+    sessions = sessions.filter(x => x.id !== id);
+    renderSessions();
+    updateProgress();
+}
+
+function updateSessionTarget(id, value){
+    const s = sessions.find(x => x.id === id);
+    s.targetHours = Number(value);
+}
+
+function renderSessions(){
+    sessionsDiv.innerHTML = "";
+
+    sessions.forEach(s => {
+        const div = document.createElement('div');
+        div.className = "border rounded-xl p-4 bg-green-50";
+
+        const progressPercent = (s.elapsed / (s.targetHours * 3600)) * 100;
+
+        div.innerHTML = `
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="font-semibold">${s.name}</h3>
+                <button onclick="deleteSession(${s.id})" class="text-red-500">Delete</button>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-4 mb-2">
+                <span class="font-mono text-lg">${formatTime(s.elapsed)}</span>
+
+                <button onclick="startSession(${s.id})" class="bg-green-600 text-white px-3 py-1 rounded">Start</button>
+                <button onclick="pauseSession(${s.id})" class="bg-yellow-500 text-white px-3 py-1 rounded">Pause</button>
+                <button onclick="resetSession(${s.id})" class="bg-gray-600 text-white px-3 py-1 rounded">Reset</button>
+
+                <div>
+                    Target hrs:
+                    <input type="number" step="0.25" value="${s.targetHours}" 
+                        onchange="updateSessionTarget(${s.id}, this.value)"
+                        class="border rounded px-2 py-1 w-20">
+                </div>
+            </div>
+
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div class="bg-blue-500 h-3 rounded-full" style="width:${Math.min(progressPercent,100)}%"></div>
+            </div>
+        `;
+
+        sessionsDiv.appendChild(div);
+    });
+}
+
+goalInput.addEventListener('change', updateProgress);
+</script>
 
 </body>
 </html>
-
